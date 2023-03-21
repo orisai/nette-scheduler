@@ -1,0 +1,17 @@
+services:
+	orisai.scheduler.jobManager: OriNette\Scheduler\DI\LazyJobManager(
+		jobs: [
+			job1: app.job1,
+			job2: app.job2,
+			3: app.job3,
+		],
+		expressions: [
+			job1: '1 * * * *',
+			job2: '2 * * * *',
+			3: '3 * * * *',
+		]
+	)
+
+	app.job1: Tests\OriNette\Scheduler\Doubles\TestJob('job1')
+	app.job2: Tests\OriNette\Scheduler\Doubles\TestJob('job2')
+	app.job3: Tests\OriNette\Scheduler\Doubles\TestJob('job3')

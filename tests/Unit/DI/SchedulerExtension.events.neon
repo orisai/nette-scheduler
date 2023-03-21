@@ -1,0 +1,26 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: basic
+
+	jobs:
+		-
+			expression: * * * * *
+			callback: Tests\OriNette\Scheduler\Doubles\TestService()
+
+	events:
+		beforeJob:
+			- @handler
+			- [@handler, 'handle']
+			- Tests\OriNette\Scheduler\Doubles\TestEventHandler()
+			- [Tests\OriNette\Scheduler\Doubles\TestEventHandler(), 'handle']
+		afterJob:
+			- @handler
+			- [@handler, 'handle']
+			- Tests\OriNette\Scheduler\Doubles\TestEventHandler()
+			- [Tests\OriNette\Scheduler\Doubles\TestEventHandler(), 'handle']
+
+services:
+	recorder: Tests\OriNette\Scheduler\Doubles\TestEventRecorder
+	handler: Tests\OriNette\Scheduler\Doubles\TestEventHandler

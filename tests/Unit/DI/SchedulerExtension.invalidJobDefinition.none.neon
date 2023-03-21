@@ -1,0 +1,7 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	jobs:
+		example:
+			expression: * * * * *

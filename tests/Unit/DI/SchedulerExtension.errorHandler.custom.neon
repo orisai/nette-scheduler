@@ -1,0 +1,15 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: basic
+	errorHandler: [@logger, 'log']
+
+	jobs:
+		0:
+			expression: * * * * *
+			callback: [@service, 'error']
+
+services:
+	service: Tests\OriNette\Scheduler\Doubles\TestService
+	logger: Tests\OriNette\Scheduler\Doubles\TestSchedulerLogger

@@ -1,0 +1,12 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	jobs:
+		example:
+			expression: * * * * *
+			callback: [@test, 'do']
+			job: Tests\OriNette\Scheduler\Doubles\TestJob
+
+services:
+	test: Tests\OriNette\Scheduler\Doubles\TestService

@@ -1,0 +1,26 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: basic
+
+	jobs:
+		0:
+			expression: * * * * *
+			callback: [@service, 'do']
+		1:
+			expression: 0 * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('1')
+		2:
+			expression: 1 * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('2')
+		3:
+			expression: * * * * *
+			callback: @service
+		4:
+			expression: * * * * *
+			callback: Tests\OriNette\Scheduler\Doubles\TestService()
+
+services:
+	service: Tests\OriNette\Scheduler\Doubles\TestService
+	- Orisai\Clock\FrozenClock(1)

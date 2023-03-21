@@ -1,0 +1,8 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	jobs:
+		-
+			expression: invalid
+			job: Tests\OriNette\Scheduler\Doubles\TestJob
