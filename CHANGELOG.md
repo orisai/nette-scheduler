@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased](https://github.com/orisai/nette-scheduler/compare/1.0.1...HEAD)
 
+### Added
+
+- `Scheduler` is always available via `Container->getByType()` (even with `di > export > types: false`)
+
 ## [1.0.1](https://github.com/orisai/nette-scheduler/compare/1.0.0...1.0.1) - 2023-04-04
 
 ### Changed

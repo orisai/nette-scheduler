@@ -19,6 +19,7 @@ use Orisai\Scheduler\Command\WorkerCommand;
 use Orisai\Scheduler\Executor\ProcessJobExecutor;
 use Orisai\Scheduler\Job\CallbackJob;
 use Orisai\Scheduler\ManagedScheduler;
+use Orisai\Scheduler\Scheduler;
 use stdClass;
 use function function_exists;
 use function is_array;
@@ -93,6 +94,7 @@ final class SchedulerExtension extends CompilerExtension
 		$config = $this->config;
 
 		$schedulerDefinition = $this->registerScheduler($builder, $config);
+		$this->compiler->addExportedType(Scheduler::class);
 		$this->registerCommands($builder, $config, $schedulerDefinition);
 	}
 

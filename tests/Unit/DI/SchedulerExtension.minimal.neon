@@ -1,2 +1,9 @@
 extensions:
+	di: Nette\DI\Extensions\DIExtension
 	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+di:
+	export:
+		parameters: false
+		tags: false
+		types: false
