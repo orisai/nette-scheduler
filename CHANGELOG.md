@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased](https://github.com/orisai/nette-scheduler/compare/1.0.2...HEAD)
 
+### Added
+
+- compatibility with orisai/scheduler:^2.0.0
+- planning jobs by seconds
+- timezones support
+- locked job, before run and after run events
+- job results are shown in console immediately
+- stderr handling in subprocesses - causes an exception
+- stdout handling in subprocesses - causes a notice, instead of an exception
+
 ## [1.0.2](https://github.com/orisai/nette-scheduler/compare/1.0.1...1.0.2) - 2023-10-05
 
 ### Added

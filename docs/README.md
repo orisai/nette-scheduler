@@ -7,7 +7,15 @@
 - [Why do you need it?](#why-do-you-need-it)
 - [Quick start](#quick-start)
 - [Execution time](#execution-time)
+	- [Cron expression - minutes and above](#cron-expression---minutes-and-above)
+	- [Seconds](#seconds)
+	- [Timezones](#timezones)
 - [Events](#events)
+	- [Before job event](#before-job-event)
+	- [After job event](#after-job-event)
+	- [Locked job event](#locked-job-event)
+	- [Before run event](#before-run-event)
+	- [After run event](#after-run-event)
 - [Handling errors](#handling-errors)
 - [Locks and job overlapping](#locks-and-job-overlapping)
 - [Parallelization and process isolation](#parallelization-and-process-isolation)
@@ -48,7 +56,9 @@ Orisai Scheduler solves all of these problems.
 On top of that you get:
 
 - [locking](#locks-and-job-overlapping) - each job should run only once at a time, without overlapping
-- [before/after job events](#events) for accessing job status
+- [per-second scheduling](#seconds) - run jobs multiple times in a minute
+- [timezones](#timezones) - interpret job schedule within specified timezone
+- [events](#events) for accessing job status
 - [overview of all jobs](#list-command), including estimated time of next run
 - running jobs either [once](#run-command) or [periodically](#worker-command) during development
 - running just a [single](#run-single-job) job, either ignoring or respecting due times
@@ -119,9 +129,24 @@ Good to go!
 
 ## Execution time
 
-Cron execution time is expressed via `expression`, using crontab syntax
+Execution time is determined by [cron expression](#cron-expression---minutes-and-above) which allows you to schedule
+jobs from anywhere between once a year and once every minute and [seconds], allowing you tu run job several times in a
+minute.
 
-```php
+In ideal situation, jobs are executed just in time, but it may not be always the case. Crontab can execute jobs several
+seconds late, serial jobs execution may take way over a minute and long jobs may overlap. To prevent any issues, we
+implement multiple measures:
+
+- jobs [repeated after seconds](#seconds) take in account crontab may run late and delay each execution accordingly to
+  minimize unwanted gaps between executions (e.g. if crontab starts 10 seconds late, all jobs also run 10 seconds late)
+- [parallel execution](#parallelization-and-process-isolation) can be used instead of the serial
+- [locks](#locks-and-job-overlapping) should be used to prevent overlapping of long-running jobs
+
+### Cron expression - minutes and above
+
+Main job execution time is expressed via `CronExpression`, using crontab syntax
+
+```neon
 orisai.scheduler:
 	jobs:
 		-
@@ -159,9 +184,67 @@ You can also use macro instead of an expression:
 - `@daily`, `@midnight` - Run once a day, midnight - `0 0 * * *`
 - `@hourly` - Run once an hour, first minute - `0 * * * *`
 
+### Seconds
+
+Run a job every n seconds within a minute.
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: # ...
+			callback: # ...
+			repeatAfterSeconds: 1 # every second, 60 times a minute
+```
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: # ...
+			callback: # ...
+			repeatAfterSeconds: 30 # every 30 seconds, 2 times a minute
+```
+
+With default, synchronous job executor, all jobs scheduled for current second are executed and just after it is
+finished, jobs for the next second are executed. With [parallel](#parallelization-and-process-isolation) executor it is
+different - all jobs are executed as soon as it is their time. Therefore, it is strongly recommended to
+use [locking](#locks-and-job-overlapping) to prevent overlapping.
+
+### Timezones
+
+All jobs run within timezone used by your application. You may specify that your job execution time should be
+interpreted within different timezone, e.g. every midnight in Europe/Prague.
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: 0 0 * * *
+			callback: # ...
+			timeZone: Europe/Prague
+```
+
+Some timezones use daylight savings time. When daylight saving time changes occur, scheduled job may run twice or even
+not run at all during that period. Make sure you run your tasks often enough and that running them more often gives you
+expected results.
+
+If you want job to run at specific time (e.g. midnight) in timezone of each user, run it every 15 minutes and implement
+timezone checking logic yourself. Several time zones have deviations of either 30 or 45 minutes. For instance, UTC-03:30
+is the standard time in Newfoundland, while Nepal's standard time is UTC+05:45. Indian Standard Time is UTC+05:30, and
+Myanmar Standard Time is UTC+06:30.
+
 ## Events
 
-Run callbacks before and after job to collect statistics, etc.
+Run callbacks to collect statistics, etc.
+
+### Before job event
+
+Executes before job start
+
+- has [JobInfo](#job-info-and-result) available as a parameter
+- does not execute if job is [locked](#locks-and-job-overlapping), see [locked job event](#locked-job-event)
+- check [callback job](#callback-job) `callback` syntax for event callable syntax, it is the same
 
 ```neon
 orisai.scheduler:
@@ -169,16 +252,181 @@ orisai.scheduler:
 		# list<callable>
 		beforeJob:
 			# same as jobs > [job] > callback, any valid callable
-			- @handler
+			- [@handler, 'beforeJob']
+
+services:
+	handler: Example\SchedulerEventHandler
+```
+
+```php
+namespace Example;
+
+use Orisai\Scheduler\Status\JobInfo;
+
+final class SchedulerEventHandler
+{
+
+	public function beforeJob(JobInfo $info): void
+	{
+		// Executes before job start
+	}
+
+}
+```
+
+### After job event
+
+Executes after job finish
+
+- has [JobInfo and JobResult](#job-info-and-result) available as a parameter
+- executes even if job failed with an exception
+- check [callback job](#callback-job) `callback` syntax for event callable syntax, it is the same
+
+```neon
+orisai.scheduler:
+	events:
 		# list<callable>
 		afterJob:
 			# same as jobs > [job] > callback, any valid callable
-			- @handler
+			- [@handler, 'afterJob']
+
+services:
+	handler: Example\SchedulerEventHandler
 ```
 
-Check [job info and result](#job-info-and-result) for available status info
+```php
+namespace Example;
 
-And check [callback job](#callback-job) `callback` syntax for more examples, events can use all shown variants too
+use Orisai\Scheduler\Status\JobInfo;
+use Orisai\Scheduler\Status\JobResult;
+
+final class SchedulerEventHandler
+{
+
+	public function afterJob(JobInfo $info, JobResult $result): void
+	{
+		// Executes after job finish
+	}
+
+}
+```
+
+### Locked job event
+
+Executes when [lock](#locks-and-job-overlapping) for given job is acquired by another process and therefore job does not
+execute
+
+- has [JobInfo and JobResult](#job-info-and-result) available as a parameter
+- check [callback job](#callback-job) `callback` syntax for event callable syntax, it is the same
+
+```neon
+orisai.scheduler:
+	events:
+		# list<callable>
+		lockedJob:
+			# same as jobs > [job] > callback, any valid callable
+			- [@handler, 'lockedJob']
+
+services:
+	handler: Example\SchedulerEventHandler
+```
+
+```php
+namespace Example;
+
+use Orisai\Scheduler\Status\JobInfo;
+use Orisai\Scheduler\Status\JobResult;
+
+final class SchedulerEventHandler
+{
+
+	public function lockedJob(JobInfo $info, JobResult $result): void
+	{
+		// Executes when lock for given job is acquired by another process
+	}
+
+}
+```
+
+### Before run event
+
+Executes before every run (every minute), even if no jobs will be executed
+
+- has RunInfo available as a parameter
+- check [callback job](#callback-job) `callback` syntax for event callable syntax, it is the same
+
+```neon
+orisai.scheduler:
+	events:
+		# list<callable>
+		beforeRun:
+			# same as jobs > [job] > callback, any valid callable
+			- [@handler, 'beforeRun']
+
+services:
+	handler: Example\SchedulerEventHandler
+```
+
+```php
+namespace Example;
+
+use Orisai\Scheduler\Status\RunInfo;
+
+final class SchedulerEventHandler
+{
+
+	public function beforeRun(RunInfo $info): void
+	{
+		$info->getStart(); // DateTimeImmutable
+
+		foreach ($info->getJobInfos() as $jobInfo) {
+			$jobInfo->getId(); // int|string
+			$jobInfo->getName(); // string
+			$jobInfo->getExpression(); // string, e.g. * * * * *
+			$jobInfo->getExtendedExpression(); // string, e.g. * * * * * / 30
+			$jobInfo->getRepeatAfterSeconds(); // int<0, 30>
+			$jobInfo->getRunsCountPerMinute(); // int<1, max>
+			$jobInfo->getEstimatedStartTimes(); // list<DateTimeImmutable>
+		}
+	}
+
+}
+```
+
+### After run event
+
+Executes after every run (every minute), even if no jobs were executed
+
+- has [RunSummary](#run-summary) available as a parameter
+- check [callback job](#callback-job) `callback` syntax for event callable syntax, it is the same
+
+```neon
+orisai.scheduler:
+	events:
+		# list<callable>
+		afterRun:
+			# same as jobs > [job] > callback, any valid callable
+			- [@handler, 'afterRun']
+
+services:
+	handler: Example\SchedulerEventHandler
+```
+
+```php
+namespace Example;
+
+use Orisai\Scheduler\Status\RunSummary;
+
+final class SchedulerEventHandler
+{
+
+	public function afterRun(RunSummary $summary): void
+	{
+		// Executes after every run (every minute), even if no jobs were executed
+	}
+
+}
+```
 
 ## Handling errors
 
@@ -210,7 +458,8 @@ class SchedulerLogger
 		$this->logger->error("Job {$info->getName()} failed", [
 			'exception' => $throwable,
 			'name' => $info->getName(),
-			'expression' => $info->getExpression(),
+			'expression' => $info->getExtendedExpression(),
+			'runSecond' => $info->getRunSecond(),
 			'start' => $info->getStart()->format(DateTimeInterface::ATOM),
 			'end' => $result->getEnd()->format(DateTimeInterface::ATOM),
 		]);
@@ -229,7 +478,7 @@ services:
 
 ## Locks and job overlapping
 
-Crontab jobs are time-based and simply run at specified intervals. If they take too long, they may overlap and run
+Jobs are time-based and simply run at specified intervals. If they take too long, they may overlap and run
 simultaneously. This may cause issues if the jobs access the same resources, such as files or databases, leading to
 conflicts or data corruption.
 
@@ -269,6 +518,17 @@ class ExampleJobService
 	}
 
 }
+```
+
+To make sure locks are correctly used during deployments, specify constant id for every added job, lock identifiers rely
+on that fact. Otherwise, your job id will change when new jobs are added before it and acquired lock will be ignored.
+
+```neon
+orisai.scheduler:
+	jobs:
+		job-id:
+			expression: # ...
+			callback: # ...
 ```
 
 ## Parallelization and process isolation
@@ -390,6 +650,9 @@ Info:
 $id = $info->getId(); // string|int
 $name = $info->getName(); // string
 $expression = $info->getExpression(); // string, e.g. '* * * * *'
+$repeatAfterSeconds = $info->getRepeatAfterSeconds(); // int<0, 30>
+$extendedExpression = $info->getExtendedExpression(); // string, e.g. '* * * * * / 30'
+$runSecond = $info->getRunSecond(); // int
 $start = $info->getStart(); // DateTimeImmutable
 ```
 
@@ -414,7 +677,7 @@ $summary = $scheduler->run(); // RunSummary
 $summary->getStart(); // DateTimeImmutable
 $summary->getEnd(); // DateTimeImmutable
 
-foreach ($summary->getJobs() as $jobSummary) {
+foreach ($summary->getJobSummaries() as $jobSummary) {
 	$jobSummary->getInfo(); // JobInfo
 	$jobSummary->getResult(); // JobResult
 }
@@ -489,13 +752,15 @@ Run single job, ignoring scheduled time
 
 ### List command
 
-List all scheduled jobs (in `expression [id] name... next-due` format)
+List all scheduled jobs (in `expression / second (timezone) [id] name... next-due` format)
 
 `bin/console scheduler:list`
 
 - use `--next` to sort jobs by their next execution time
-- `--next=N` lists only *N* next jobs (e.g. `--next=3` prints maximally 3)
+	- `--next=N` lists only *N* next jobs (e.g. `--next=3` prints maximally 3)
 - use `-v` to display absolute times
+- use `--timezone` (or `-tz`) to display times in specified timezone instead of one used by application
+	- e.g. `--tz=UTC`
 
 ### Worker command
 

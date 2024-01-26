@@ -5,7 +5,7 @@ namespace Tests\OriNette\Scheduler\Doubles;
 use Orisai\Scheduler\Status\JobInfo;
 use Orisai\Scheduler\Status\JobResult;
 
-final class TestEventHandler
+final class TestJobEventHandler
 {
 
 	private TestEventRecorder $recorder;

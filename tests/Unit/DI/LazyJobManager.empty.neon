@@ -1,5 +1,4 @@
 services:
 	orisai.scheduler.jobManager: OriNette\Scheduler\DI\LazyJobManager(
-		jobs: [],
-		expressions: []
+		jobSchedules: [],
 	)

@@ -1,21 +1,36 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Cannot access property \\$records on Tests\\\\OriNette\\\\Scheduler\\\\Doubles\\\\TestEventRecorder\\|null\\.$#"
-			count: 2
-			path: ../tests/Unit/DI/SchedulerExtensionTest.php
-
-		-
-			message: "#^Cannot access property \\$records on Tests\\\\OriNette\\\\Scheduler\\\\Doubles\\\\TestSchedulerLogger\\|null\\.$#"
-			count: 2
-			path: ../tests/Unit/DI/SchedulerExtensionTest.php
-
-		-
-			message: "#^Cannot call method run\\(\\) on Orisai\\\\Scheduler\\\\Scheduler\\|null\\.$#"
-			count: 5
-			path: ../tests/Unit/DI/SchedulerExtensionTest.php
-
-		-
-			message: "#^Cannot call method run\\(\\) on Symfony\\\\Component\\\\Console\\\\Application\\|null\\.$#"
+			message: "#^Method OriNette\\\\Scheduler\\\\DI\\\\LazyJobManager\\:\\:getExpressions\\(\\) return type has no value type specified in iterable type array\\.$#"
 			count: 1
-			path: ../tests/Unit/DI/schedulerExtensionProcessExecutable.php
+			path: ../src/DI/LazyJobManager.php
+
+		-
+			message: "#^Method OriNette\\\\Scheduler\\\\DI\\\\LazyJobManager\\:\\:getPair\\(\\) has parameter \\$id with no type specified\\.$#"
+			count: 1
+			path: ../src/DI/LazyJobManager.php
+
+		-
+			message: "#^Method OriNette\\\\Scheduler\\\\DI\\\\LazyJobManager\\:\\:getPair\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: ../src/DI/LazyJobManager.php
+
+		-
+			message: "#^Method OriNette\\\\Scheduler\\\\DI\\\\LazyJobManager\\:\\:getPairs\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: ../src/DI/LazyJobManager.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with 'Orisai\\\\\\\\Scheduler\\\\\\\\Scheduler' and 'getJobSchedules' will always evaluate to true\\.$#"
+			count: 1
+			path: ../src/DI/SchedulerExtension.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with 'Orisai\\\\\\\\Scheduler\\\\\\\\Scheduler' and 'getJobSchedules' will always evaluate to true\\.$#"
+			count: 3
+			path: ../tests/Unit/DI/SchedulerExtensionTest.php
+
+		-
+			message: "#^Call to function method_exists\\(\\) with Orisai\\\\Scheduler\\\\Status\\\\RunSummary and 'getJobs' will always evaluate to false\\.$#"
+			count: 2
+			path: ../tests/Unit/DI/SchedulerExtensionTest.php

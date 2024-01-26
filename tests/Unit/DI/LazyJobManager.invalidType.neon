@@ -1,11 +1,13 @@
 services:
 	orisai.scheduler.jobManager: OriNette\Scheduler\DI\LazyJobManager(
-		jobs: [
-			job1: app.job1,
+		jobSchedules: [
+			job1: [
+				job: app.job1,
+				expression: '1 * * * *',
+				repeatAfterSeconds: 0,
+				timeZone: null,
+			],
 		],
-		expressions: [
-			job1: '1 * * * *',
-		]
 	)
 
 	app.job1: \stdClass

@@ -2,11 +2,14 @@
 
 namespace Tests\OriNette\Scheduler\Unit\DI;
 
+use Cron\CronExpression;
+use DateTimeZone;
 use Exception;
 use Generator;
 use Nette\DI\InvalidConfigurationException;
 use OriNette\DI\Boot\ManualConfigurator;
 use OriNette\Scheduler\DI\LazyJobManager;
+use OriNette\Scheduler\DI\LazyJobManagerV1;
 use Orisai\Scheduler\Command\ListCommand;
 use Orisai\Scheduler\Command\RunCommand;
 use Orisai\Scheduler\Command\RunJobCommand;
@@ -14,8 +17,10 @@ use Orisai\Scheduler\Command\WorkerCommand;
 use Orisai\Scheduler\Executor\ProcessJobExecutor;
 use Orisai\Scheduler\Job\CallbackJob;
 use Orisai\Scheduler\ManagedScheduler;
+use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Lock\LockFactory;
 use Tests\OriNette\Scheduler\Doubles\TestEventRecorder;
 use Tests\OriNette\Scheduler\Doubles\TestJob;
 use Tests\OriNette\Scheduler\Doubles\TestLogger;
@@ -24,6 +29,7 @@ use Tests\OriNette\Scheduler\Doubles\TestService;
 use Tracy\Debugger;
 use function dirname;
 use function function_exists;
+use function method_exists;
 use function mkdir;
 use const PHP_VERSION_ID;
 
@@ -58,8 +64,14 @@ final class SchedulerExtensionTest extends TestCase
 		self::assertSame($scheduler, $container->getByType(Scheduler::class));
 
 		$manager = $container->getService('orisai.scheduler.jobManager');
-		self::assertInstanceOf(LazyJobManager::class, $manager);
-		self::assertNull($container->getByType(LazyJobManager::class, false));
+		// Compat - orisai/scheduler v1
+		if (method_exists(JobManager::class, 'getPairs')) {
+			self::assertInstanceOf(LazyJobManagerV1::class, $manager);
+			self::assertNull($container->getByType(LazyJobManagerV1::class, false));
+		} else {
+			self::assertInstanceOf(LazyJobManager::class, $manager);
+			self::assertNull($container->getByType(LazyJobManager::class, false));
+		}
 
 		if (function_exists('proc_open')) {
 			$executor = $container->getService('orisai.scheduler.executor');
@@ -84,6 +96,54 @@ final class SchedulerExtensionTest extends TestCase
 		$workerCommand = $container->getService('orisai.scheduler.command.worker');
 		self::assertInstanceOf(WorkerCommand::class, $workerCommand);
 		self::assertNull($container->getByType(WorkerCommand::class, false));
+	}
+
+	public function testJobSchedules(): void
+	{
+		// Compat - orisai/scheduler v1
+		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
+			self::markTestSkipped('Schedules are available since v2');
+		}
+
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.jobSchedules.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getByType(Scheduler::class);
+		$schedules = $scheduler->getJobSchedules();
+
+		self::assertCount(3, $schedules);
+
+		$schedule = $schedules[0];
+		self::assertEquals(new CronExpression('* * * * *'), $schedule->getExpression());
+		self::assertSame(0, $schedule->getRepeatAfterSeconds());
+		self::assertNull($schedule->getTimeZone());
+
+		$schedule = $schedules[1];
+		self::assertEquals(new CronExpression('0 * * * *'), $schedule->getExpression());
+		self::assertSame(1, $schedule->getRepeatAfterSeconds());
+		self::assertEquals(new DateTimeZone('Europe/Prague'), $schedule->getTimeZone());
+
+		$schedule = $schedules[2];
+		self::assertEquals(new CronExpression('1 * * * *'), $schedule->getExpression());
+		self::assertSame(30, $schedule->getRepeatAfterSeconds());
+		self::assertEquals(new DateTimeZone('UTC'), $schedule->getTimeZone());
+	}
+
+	public function testInvalidTimeZone(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.invalidTimeZone.neon');
+
+		$this->expectException(InvalidConfigurationException::class);
+		$this->expectExceptionMessage(
+			"Failed assertion 'Valid timezone' for item 'orisai.scheduler › jobs › 0 › timeZone' with value 'invalid'.",
+		);
+
+		$configurator->createContainer();
 	}
 
 	public function testExecutorBasic(): void
@@ -112,7 +172,12 @@ final class SchedulerExtensionTest extends TestCase
 
 		$result = $scheduler->run();
 
-		self::assertCount(4, $result->getJobs());
+		// Compat - orisai/scheduler v1
+		if (method_exists($result, 'getJobs')) {
+			self::assertCount(4, $result->getJobs());
+		} else {
+			self::assertCount(4, $result->getJobSummaries());
+		}
 
 		self::assertSame(2, $service->executions);
 		self::assertSame(1, $job1->executions);
@@ -139,20 +204,94 @@ final class SchedulerExtensionTest extends TestCase
 		$result = $scheduler->run();
 
 		// Can't test the same way as basic executor, we are in different process
-		self::assertCount(2, $result->getJobs());
+		// Compat - orisai/scheduler v1
+		if (method_exists($result, 'getJobs')) {
+			self::assertCount(2, $result->getJobs());
+		} else {
+			self::assertCount(2, $result->getJobSummaries());
+		}
 	}
 
-	public function testEvents(): void
+	public function testRunEvents(): void
 	{
+		// Compat - orisai/scheduler v1
+		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
+			self::markTestSkipped('Run events are available since v2');
+		}
+
 		$configurator = new ManualConfigurator($this->rootDir);
 		$configurator->setForceReloadContainer();
-		$configurator->addConfig(__DIR__ . '/SchedulerExtension.events.neon');
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.runEvents.neon');
 
 		$container = $configurator->createContainer();
 
 		$scheduler = $container->getByType(Scheduler::class);
-
 		$recorder = $container->getByType(TestEventRecorder::class);
+
+		self::assertSame([], $recorder->records);
+
+		$scheduler->run();
+		self::assertSame(
+			[
+				'before run',
+				'before run',
+				'before run',
+				'before run',
+				'after run',
+				'after run',
+				'after run',
+				'after run',
+			],
+			$recorder->records,
+		);
+	}
+
+	public function testLockedJobEvents(): void
+	{
+		// Compat - orisai/scheduler v1
+		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
+			self::markTestSkipped('Locked job events are available since v2');
+		}
+
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.lockedJobEvents.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getByType(Scheduler::class);
+		$lockFactory = $container->getByType(LockFactory::class);
+		$recorder = $container->getByType(TestEventRecorder::class);
+
+		$scheduler->run();
+		self::assertSame([], $recorder->records);
+
+		$lock = $lockFactory->createLock('Orisai.Scheduler.Job/jobName');
+		self::assertTrue($lock->acquire());
+
+		$scheduler->run();
+		self::assertSame(
+			[
+				'locked job',
+				'locked job',
+				'locked job',
+				'locked job',
+			],
+			$recorder->records,
+		);
+	}
+
+	public function testJobEvents(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.jobEvents.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getByType(Scheduler::class);
+		$recorder = $container->getByType(TestEventRecorder::class);
+
 		self::assertSame([], $recorder->records);
 
 		$scheduler->run();

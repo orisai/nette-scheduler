@@ -10,17 +10,17 @@ orisai.scheduler:
 			callback: Tests\OriNette\Scheduler\Doubles\TestService()
 
 	events:
-		beforeJob:
+		beforeRun:
 			- @handler
 			- [@handler, 'handle']
-			- Tests\OriNette\Scheduler\Doubles\TestEventHandler()
-			- [Tests\OriNette\Scheduler\Doubles\TestEventHandler(), 'handle']
-		afterJob:
+			- Tests\OriNette\Scheduler\Doubles\TestRunEventHandler()
+			- [Tests\OriNette\Scheduler\Doubles\TestRunEventHandler(), 'handle']
+		afterRun:
 			- @handler
 			- [@handler, 'handle']
-			- Tests\OriNette\Scheduler\Doubles\TestEventHandler()
-			- [Tests\OriNette\Scheduler\Doubles\TestEventHandler(), 'handle']
+			- Tests\OriNette\Scheduler\Doubles\TestRunEventHandler()
+			- [Tests\OriNette\Scheduler\Doubles\TestRunEventHandler(), 'handle']
 
 services:
 	recorder: Tests\OriNette\Scheduler\Doubles\TestEventRecorder
-	handler: Tests\OriNette\Scheduler\Doubles\TestEventHandler
+	handler: Tests\OriNette\Scheduler\Doubles\TestRunEventHandler

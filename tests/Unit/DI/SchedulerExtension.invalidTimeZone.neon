@@ -1,0 +1,12 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	jobs:
+		0:
+			expression: * * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('0')
+			timeZone: invalid
+
+services:
+	- Orisai\Clock\FrozenClock(1)

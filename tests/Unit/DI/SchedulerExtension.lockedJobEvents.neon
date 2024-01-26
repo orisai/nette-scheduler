@@ -1,0 +1,22 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: basic
+
+	jobs:
+		jobName:
+			expression: * * * * *
+			callback: Tests\OriNette\Scheduler\Doubles\TestService()
+
+	events:
+		lockedJob:
+			- @handler
+			- [@handler, 'handle']
+			- Tests\OriNette\Scheduler\Doubles\TestLockedJobEventHandler()
+			- [Tests\OriNette\Scheduler\Doubles\TestLockedJobEventHandler(), 'handle']
+
+services:
+	recorder: Tests\OriNette\Scheduler\Doubles\TestEventRecorder
+	handler: Tests\OriNette\Scheduler\Doubles\TestLockedJobEventHandler
+	lock: Symfony\Component\Lock\LockFactory(Symfony\Component\Lock\Store\InMemoryStore())

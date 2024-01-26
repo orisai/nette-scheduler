@@ -1,15 +1,25 @@
 services:
 	orisai.scheduler.jobManager: OriNette\Scheduler\DI\LazyJobManager(
-		jobs: [
-			job1: app.job1,
-			job2: app.job2,
-			3: app.job3,
+		jobSchedules: [
+			job1: [
+				job: app.job1,
+				expression: '1 * * * *',
+				repeatAfterSeconds: 0,
+				timeZone: null,
+			],
+			job2: [
+				job: app.job2,
+				expression: '2 * * * *',
+				repeatAfterSeconds: 10,
+				timeZone: 'Europe/Prague',
+			],
+			3: [
+				job: app.job3,
+				expression: '3 * * * *',
+				repeatAfterSeconds: 30,
+				timeZone: 'UTC',
+			],
 		],
-		expressions: [
-			job1: '1 * * * *',
-			job2: '2 * * * *',
-			3: '3 * * * *',
-		]
 	)
 
 	app.job1: Tests\OriNette\Scheduler\Doubles\TestJob('job1')
