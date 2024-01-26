@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - stderr handling in subprocesses - causes an exception
 - stdout handling in subprocesses - causes a notice, instead of an exception
 
+### Fixed
+
+- `SchedulerExtension` - error message for case when neither `callback` nor `job` or both options are defined
+
 ## [1.0.2](https://github.com/orisai/nette-scheduler/compare/1.0.1...1.0.2) - 2023-10-05
 
 ### Added

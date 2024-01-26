@@ -380,7 +380,7 @@ final class SchedulerExtensionTest extends TestCase
 
 		$this->expectException(InvalidConfigurationException::class);
 		$this->expectExceptionMessage(
-			"Failed assertion 'Use either 'callback' or 'assert'' for item 'orisai.scheduler › jobs › example' with value object stdClass.",
+			"Failed assertion 'Use either 'callback' or 'job'' for item 'orisai.scheduler › jobs › example' with value object stdClass.",
 		);
 
 		$configurator->createContainer();

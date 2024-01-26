@@ -125,7 +125,7 @@ final class SchedulerExtension extends CompilerExtension
 					}
 
 					return $values->callback !== null || $values->job !== null;
-				}, "Use either 'callback' or 'assert'"),
+				}, "Use either 'callback' or 'job'"),
 			),
 		]);
 	}
