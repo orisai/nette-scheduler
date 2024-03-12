@@ -78,7 +78,7 @@ extensions:
 	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
 ```
 
-Create service which will be run as a job
+Create service which will be run as a job (for further info about job syntax, check [job types](#job-types))
 
 ```php
 namespace Example;
@@ -604,9 +604,26 @@ orisai.scheduler:
 			callback: Example\ExampleJobService()
 ```
 
+Callback must be a function/method matching following signature (unused parameters may be omitted). Functionality is
+equal with `run()` method of a [custom job](#custom-job).
+
+```php
+use Orisai\Scheduler\Job\JobLock;
+
+public function example(JobLock $lock): void
+{
+	// Do whatever you need to
+}
+```
+
 ### Custom job
 
 Create own job implementation
+
+- name should be preferably unique - it is used for [logging](#handling-errors), [event](#events) metadata and listing
+  jobs in [commands](#cli-commands)
+- `run()` method must throw an exception in order to mark the job failed
+- `run()` method may manipulate [locking mechanism](#locks-and-job-overlapping)
 
 ```php
 namespace Example;
@@ -619,7 +636,7 @@ final class CustomJob implements Job
 
 	public function getName(): string
 	{
-		// Provide (preferably unique) name of the job. It will be used in jobs list
+		// Provide (preferably unique) name of the job
 		return static::class;
 	}
 
