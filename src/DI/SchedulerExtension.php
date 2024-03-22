@@ -12,7 +12,10 @@ use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use OriNette\DI\Definitions\DefinitionsLoader;
 use OriNette\Scheduler\Tracy\SchedulerTracyLogger;
+use Orisai\CronExpressionExplainer\CronExpressionExplainer;
+use Orisai\CronExpressionExplainer\DefaultCronExpressionExplainer;
 use Orisai\Exceptions\Logic\InvalidArgument;
+use Orisai\Scheduler\Command\ExplainCommand;
 use Orisai\Scheduler\Command\ListCommand;
 use Orisai\Scheduler\Command\RunCommand;
 use Orisai\Scheduler\Command\RunJobCommand;
@@ -23,6 +26,7 @@ use Orisai\Scheduler\ManagedScheduler;
 use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use stdClass;
+use function class_exists;
 use function function_exists;
 use function in_array;
 use function is_array;
@@ -138,6 +142,7 @@ final class SchedulerExtension extends CompilerExtension
 		$schedulerDefinition = $this->registerScheduler($builder, $config);
 		$this->compiler->addExportedType(Scheduler::class);
 		$this->registerCommands($builder, $config, $schedulerDefinition);
+		$this->registerExplainer($builder);
 	}
 
 	private function registerScheduler(ContainerBuilder $builder, stdClass $config): ServiceDefinition
@@ -373,6 +378,23 @@ final class SchedulerExtension extends CompilerExtension
 				$config->console->runCommand,
 			])
 			->setAutowired(false);
+
+		// Compat - orisai/scheduler <2.1
+		/** @infection-ignore-all */
+		if (class_exists(ExplainCommand::class)) {
+			$builder->addDefinition($this->prefix('command.explain'))
+				->setFactory(ExplainCommand::class, [
+					$schedulerDefinition,
+				])
+				->setAutowired(false);
+		}
+	}
+
+	private function registerExplainer(ContainerBuilder $builder): void
+	{
+		$builder->addDefinition($this->prefix('explainer'))
+			->setFactory(DefaultCronExpressionExplainer::class)
+			->setType(CronExpressionExplainer::class);
 	}
 
 }

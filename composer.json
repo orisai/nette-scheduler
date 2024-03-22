@@ -33,6 +33,7 @@
 		"php": ">=7.4.0 <8.3.0",
 		"nette/di": "^3.0.5",
 		"nette/schema": "^1.1.0",
+		"orisai/cron-expression-explainer": "^1.0.0",
 		"orisai/exceptions": "^1.0.0",
 		"orisai/nette-di": "^1.0.7",
 		"orisai/scheduler": "^1.0.0|^2.0.0"

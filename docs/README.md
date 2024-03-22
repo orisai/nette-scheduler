@@ -17,11 +17,13 @@
 	- [Before run event](#before-run-event)
 	- [After run event](#after-run-event)
 - [Handling errors](#handling-errors)
+- [Logging potential problems](#logging-potential-problems)
 - [Locks and job overlapping](#locks-and-job-overlapping)
 - [Parallelization and process isolation](#parallelization-and-process-isolation)
 - [Job types](#job-types)
 	- [Callback job](#callback-job)
 	- [Custom job](#custom-job)
+	- [Symfony command job](#symfony-command-job)
 - [Job info and result](#job-info-and-result)
 - [Run summary](#run-summary)
 - [Run single job](#run-single-job)
@@ -30,6 +32,12 @@
 	- [Run job command - run single job](#run-job-command)
 	- [List command - show all jobs](#list-command)
 	- [Worker command - run jobs periodically](#worker-command)
+	- [Explain command - explain cron expression syntax](#explain-command)
+- [Troubleshooting guide](#troubleshooting-guide)
+	- [Running a job throws JobProcessFailure exception](#running-a-job-throws-jobprocessfailure-exception)
+	- [Job starts too late](#job-starts-too-late)
+	- [Job does not start at scheduled time](#job-does-not-start-at-scheduled-time)
+	- [Job executions overlap](#job-executions-overlap)
 
 ## Why do you need it?
 
@@ -162,7 +170,7 @@ To validate your cron, you can also utilize [crontab.guru](https://crontab.guru)
 -   -   -   -   -
 |   |   |   |   |
 |   |   |   |   |
-|   |   |   |   +----- day of week (0-6) (or SUN-SAT) (0=Sunday)
+|   |   |   |   +----- day of week (0-7) (Sunday = 0 or 7) (or SUN-SAT)
 |   |   |   +--------- month (1-12) (or JAN-DEC)
 |   |   +------------- day of month (1-31)
 |   +----------------- hour (0-23)
@@ -171,18 +179,25 @@ To validate your cron, you can also utilize [crontab.guru](https://crontab.guru)
 
 Each part of expression can also use wildcard, lists, ranges and steps:
 
-- wildcard - `* * * * *` - At every minute.
-- lists - e.g. `15,30 * * * *` - At minute 15 and 30.
-- ranges - e.g. `1-9 * * * *` - At every minute from 1 through 9.
-- steps - e.g. `*/5 * * * *` - At every 5th minute.
+- wildcard - match always
+	- `* * * * *` - At every minute.
+- lists - match list of values, ranges and steps
+	- e.g. `15,30 * * * *` - At minute 15 and 30.
+- ranges - match values in range
+	- e.g. `1-9 * * * *` - At every minute from 1 through 9.
+- steps - match every nth value in range
+	- e.g. `*/5 * * * *` - At every 5th minute.
+	- e.g. `0-30/5 * * * *` - At every 5th minute from 0 through 30.
+- combinations
+	- e.g. `0-14,30-44 * * * *` - At every minute from 0 through 14 and every minute from 30 through 44.
 
 You can also use macro instead of an expression:
 
-- `@yearly`, `@annually` - Run once a year, midnight, Jan. 1 - `0 0 1 1 *`
-- `@monthly` - Run once a month, midnight, first of month - `0 0 1 * *`
-- `@weekly` - Run once a week, midnight on Sun - `0 0 * * 0`
-- `@daily`, `@midnight` - Run once a day, midnight - `0 0 * * *`
-- `@hourly` - Run once an hour, first minute - `0 * * * *`
+- `@yearly`, `@annually` - Run once a year, midnight, Jan. 1 (same as `0 0 1 1 *`)
+- `@monthly` - Run once a month, midnight, first of month (same as `0 0 1 * *`)
+- `@weekly` - Run once a week, midnight on Sun (same as `0 0 * * 0`)
+- `@daily`, `@midnight` - Run once a day, midnight (same as `0 0 * * *`)
+- `@hourly` - Run once an hour, first minute (same as `0 * * * *`)
 
 ### Seconds
 
@@ -383,7 +398,8 @@ final class SchedulerEventHandler
 			$jobInfo->getId(); // int|string
 			$jobInfo->getName(); // string
 			$jobInfo->getExpression(); // string, e.g. * * * * *
-			$jobInfo->getExtendedExpression(); // string, e.g. * * * * * / 30
+			$jobInfo->getTimeZone(); // DateTimeZone|null
+			$jobInfo->getExtendedExpression(); // string, e.g. '* * * * * / 30 (Europe/Prague)'
 			$jobInfo->getRepeatAfterSeconds(); // int<0, 30>
 			$jobInfo->getRunsCountPerMinute(); // int<1, max>
 			$jobInfo->getEstimatedStartTimes(); // list<DateTimeImmutable>
@@ -475,6 +491,30 @@ orisai.scheduler:
 services:
 	schedulerLogger: Example\SchedulerLogger
 ```
+
+## Logging potential problems
+
+Using a [PSR-3](https://www.php-fig.org/psr/psr-3/)-compatible logger
+(like [Monolog](https://github.com/Seldaek/monolog)) you may log some situations which do not fail the job, but are most
+certainly unwanted:
+
+- [Lock](#locks-and-job-overlapping) was released before the job finished. Your job has access to the lock and should
+  extend the lock time so this does not happen.
+
+To log them, just register logger or add an extension that does it for you -
+like [orisai/nette-monolog](https://github.com/orisai/nette-monolog/).
+
+```neon
+services:
+	# This is just an example, use actual logger implementation!
+	- Psr\Log\NullLogger
+```
+
+If you use [process job executor](#parallelization-and-process-isolation), then also these situations are logged:
+
+- Subprocess running the job produced unexpected *stdout* output. Job should never echo or write directly to stdout.
+- Subprocess running the job produced unexpected *stderr* output. This may happen just due to deprecation notices but may
+  also be caused by more serious problem occurring in CLI.
 
 ## Locks and job overlapping
 
@@ -657,6 +697,54 @@ orisai.scheduler:
 			job: Example\CustomJob()
 ```
 
+### Symfony command job
+
+Run [symfony/console](https://github.com/symfony/console) command as a job
+
+- if job succeeds (returns zero code), command output is ignored
+- if job fails (returns non-zero code), exception is thrown, including command return code, output and if thrown by the
+  command, the exception
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: * * * * *
+			# @service.reference and any syntax that works in services section is fine
+			job: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+```
+
+Command can be parametrized:
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: * * * * *
+			job:
+				factory: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+				setup:
+					- setCommandParameters([
+						'argument': 'value',
+						'--option': 'value',
+						'--boolean-option': true,
+					])
+```
+
+When running command as a job, [lock](#locks-and-job-overlapping) cannot be simply refreshed as with other jobs.
+Instead, you can change lock's default time to live to ensure lock was not released before the job finished.
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			expression: * * * * *
+			job:
+				factory: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+				setup:
+					- setLockTtl(600) # Time in seconds
+```
+
 ## Job info and result
 
 Status information available via [events](#events) and [run summary](#run-summary)
@@ -668,7 +756,8 @@ $id = $info->getId(); // string|int
 $name = $info->getName(); // string
 $expression = $info->getExpression(); // string, e.g. '* * * * *'
 $repeatAfterSeconds = $info->getRepeatAfterSeconds(); // int<0, 30>
-$extendedExpression = $info->getExtendedExpression(); // string, e.g. '* * * * * / 30'
+$timeZone = $info->getTimeZone(); // DateTimeZone|null
+$extendedExpression = $info->getExtendedExpression(); // string, e.g. '* * * * * / 30 (Europe/Prague)'
 $runSecond = $info->getRunSecond(); // int
 $start = $info->getStart(); // DateTimeImmutable
 ```
@@ -732,12 +821,13 @@ thrown `JobFailure`.
 
 ## CLI commands
 
-For symfony/console you may use our commands:
+For [symfony/console](https://github.com/symfony/console) you may use our commands:
 
 - [Run](#run-command)
 - [Run job](#run-job-command)
 - [List](#list-command)
 - [Worker](#worker-command)
+- [Explain](#explain-command)
 
 > Examples assume you run console via executable php script `bin/console`
 
@@ -750,7 +840,9 @@ Run scheduler once, executing jobs scheduled for the current minute
 
 `bin/console scheduler:run`
 
-- use `--json` to output json with job info and result
+Options:
+
+- `--json` - output json with job info and result
 
 You can also change crontab settings to use command instead:
 
@@ -764,20 +856,34 @@ Run single job, ignoring scheduled time
 
 `bin/console scheduler:run-job <id>`
 
-- use `--no-force` to respect due time and only run job if it is due
-- use `--json` to output json with job info and result
+Options:
+
+- `--no-force` - respect due time and only run job if it is due
+- `--json` - output json with job info and result
 
 ### List command
 
 List all scheduled jobs (in `expression / second (timezone) [id] name... next-due` format)
 
-`bin/console scheduler:list`
+```shell
+bin/console scheduler:list
+bin/console scheduler:list --next=3
+bin/console scheduler:list --timezone=Europe/Prague
+bin/console scheduler:list --explain
+bin/console scheduler:list --explain=en
+```
 
-- use `--next` to sort jobs by their next execution time
+Options:
+
+- `--next` - sort jobs by their next execution time
 	- `--next=N` lists only *N* next jobs (e.g. `--next=3` prints maximally 3)
-- use `-v` to display absolute times
-- use `--timezone` (or `-tz`) to display times in specified timezone instead of one used by application
+- `-v` - display absolute times
+- `--timezone` (or `-tz`) - display times in specified timezone instead of one used by application
 	- e.g. `--tz=UTC`
+- `--explain[=<language>]` - explain whole expression, including [seconds](#seconds) and [timezones](#timezones)
+	- [Explain command](#explain-command) with `--id` parameter can be used to explain specific job
+	- e.g. `--explain`
+	- e.g. `--explain=en` (to choose language)
 
 ### Worker command
 
@@ -799,3 +905,83 @@ Run scheduler repeatedly, once every minute
 			# Default: scheduler:run
 			runCommand: scheduler:run
 	```
+
+### Explain command
+
+Explain cron expression syntax
+
+```shell
+bin/console scheduler:explain
+bin/console scheduler:explain --id="job id"
+bin/console scheduler:explain --expression="0 22 * 12 *"
+bin/console scheduler:explain --expression="* 8 * * *" --seconds=10 --timezone="Europe/Prague" --language=en
+bin/console scheduler:explain -e"* 8 * * *" -s10 -tz"Europe/Prague" -len
+```
+
+Options:
+
+- `--id=<id>` - explain specific job
+	- [List command](#list-command) with `--explain` parameter can be used to explain all jobs
+- `--expression=<expression>` (or `-e`) - explain expression
+- `--seconds=<seconds>` (or `-s`) - repeat every n seconds
+- `--timezone=<timezone>` (or `-tz`) - the timezone time should be displayed in
+- `--language=<language>` (or `-l`) - explain in specified language
+
+
+## Troubleshooting guide
+
+Common errors and how to solve them.
+
+### Running a job throws JobProcessFailure exception
+
+Process can fail due to various reasons. Here are covered the most common (and known) ones.
+
+*Stdout is empty:*
+
+Stdout is used to return job result as a json. Being empty means that either executed command is completely wrong and
+does not run the job or that job was terminated prematurely. Premature termination may happen when job or one of its
+before/after events call the `exit()` (or `die()`) function or when the process is killed on system level.
+
+*Stdout contains different output than json with job result:*
+
+If the message says something like *Could not open input file: bin/console* then either executable file does not exist
+(you can change path to executable, as described [here](#parallelization-and-process-isolation)) or permissions are set
+up badly, and you don't have rights to execute the file.
+
+In case of other stdout outputs you may run completely wrong command or the command writes to stdout. While we are able
+to catch most output to `php://output` (like `print` and `echo`) and handle it properly, it is not always possible.
+Output may still be produced outside the PHP script, you may have defined output buffer with higher priority than the
+one from job runner or terminated the job.
+
+*Stderr contains a suppressed error:*
+
+That means you don't have an [error handler](#handling-errors) set or that the error handler throws an exception. Set an
+error handler and make sure that it does not throw any exception.
+
+### Job starts too late
+
+Make sure to set up [parallel job executor](#parallelization-and-process-isolation). Otherwise, jobs are executed one
+after the other and every preceding job will delay execution of the next job.
+
+Before run/job events must finish before any jobs are started. Optimize them well and never use functions
+like `sleep()`.
+
+### Job does not start at scheduled time
+
+Cron expressions are quite complex and interpreting them may not be always easy. Use `--explain` parameter of
+the [list command](#list-command) or the [explain command](#explain-command) to explain the expression.
+
+You can also check the next run date computed from cron expression
+
+```php
+$scheduler->getJobSchedules()['job-id']->getExpression()->getNextRunDate();
+```
+
+### Job executions overlap
+
+Set up [locking](#locks-and-job-overlapping) and make sure the lock storage is sufficient for your setup. E.g. flock (
+lock files on the disk) will not work for applications running across multiple servers.
+
+Default lock timeout is set to 5 minutes. If your lock storage supports expiration and job takes over 5 minutes, lock
+will be released before job finishes. In such case it is up to you to prolong the expiration time.
+Each [job type](#job-types) allows you to control the lock.

@@ -10,6 +10,9 @@ use Nette\DI\InvalidConfigurationException;
 use OriNette\DI\Boot\ManualConfigurator;
 use OriNette\Scheduler\DI\LazyJobManager;
 use OriNette\Scheduler\DI\LazyJobManagerV1;
+use Orisai\CronExpressionExplainer\CronExpressionExplainer;
+use Orisai\CronExpressionExplainer\DefaultCronExpressionExplainer;
+use Orisai\Scheduler\Command\ExplainCommand;
 use Orisai\Scheduler\Command\ListCommand;
 use Orisai\Scheduler\Command\RunCommand;
 use Orisai\Scheduler\Command\RunJobCommand;
@@ -27,6 +30,7 @@ use Tests\OriNette\Scheduler\Doubles\TestLogger;
 use Tests\OriNette\Scheduler\Doubles\TestSchedulerLogger;
 use Tests\OriNette\Scheduler\Doubles\TestService;
 use Tracy\Debugger;
+use function class_exists;
 use function dirname;
 use function function_exists;
 use function method_exists;
@@ -96,6 +100,33 @@ final class SchedulerExtensionTest extends TestCase
 		$workerCommand = $container->getService('orisai.scheduler.command.worker');
 		self::assertInstanceOf(WorkerCommand::class, $workerCommand);
 		self::assertNull($container->getByType(WorkerCommand::class, false));
+
+		// Compat - orisai/scheduler <2.1
+		if (class_exists(ExplainCommand::class)) {
+			$explainCommand = $container->getService('orisai.scheduler.command.explain');
+			self::assertInstanceOf(ExplainCommand::class, $explainCommand);
+			self::assertNull($container->getByType(ExplainCommand::class, false));
+		}
+
+		$explainer = $container->getService('orisai.scheduler.explainer');
+		self::assertInstanceOf(DefaultCronExpressionExplainer::class, $explainer);
+		self::assertSame($container->getByType(CronExpressionExplainer::class), $explainer);
+	}
+
+	public function testSchedulerIsExportedType(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.exportedType.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getService('orisai.scheduler.scheduler');
+		self::assertInstanceOf(ManagedScheduler::class, $scheduler);
+		self::assertSame($scheduler, $container->getByType(Scheduler::class));
+
+		// Not exported type for comparison
+		self::assertNull($container->getByType(CronExpressionExplainer::class, false));
 	}
 
 	public function testJobSchedules(): void
