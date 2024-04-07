@@ -492,6 +492,7 @@ class SchedulerLogger
 			'runSecond' => $info->getRunSecond(),
 			'start' => $info->getStart()->format(DateTimeInterface::ATOM),
 			'end' => $result->getEnd()->format(DateTimeInterface::ATOM),
+			'forcedRun' => $info->isForcedRun(),
 		]);
 	}
 
@@ -774,6 +775,7 @@ $timeZone = $info->getTimeZone(); // DateTimeZone|null
 $extendedExpression = $info->getExtendedExpression(); // string, e.g. '* * * * * / 30 (Europe/Prague)'
 $runSecond = $info->getRunSecond(); // int
 $start = $info->getStart(); // DateTimeImmutable
+$forcedRun = $info->isForcedRun(); // bool, happens when running job via $scheduler->runJob() or scheduler:run-job command, ignoring the cron expression
 ```
 
 Result:
