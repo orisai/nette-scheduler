@@ -1,0 +1,21 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: basic
+
+	jobs:
+		0:
+			expression: * * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('0')
+			enabled: false
+		1:
+			expression: * * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('1')
+			enabled: true
+		2:
+			expression: * * * * *
+			job: Tests\OriNette\Scheduler\Doubles\TestJob('2')
+
+services:
+	- Orisai\Clock\FrozenClock(1)

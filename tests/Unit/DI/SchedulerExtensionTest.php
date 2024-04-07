@@ -163,6 +163,38 @@ final class SchedulerExtensionTest extends TestCase
 		self::assertEquals(new DateTimeZone('UTC'), $schedule->getTimeZone());
 	}
 
+	public function testEnabledJob(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.enabledJob.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getByType(Scheduler::class);
+
+		self::assertFalse($container->hasService('orisai.scheduler.job.0'));
+		$job1 = $container->getService('orisai.scheduler.job.1');
+		self::assertInstanceOf(TestJob::class, $job1);
+		$job2 = $container->getService('orisai.scheduler.job.2');
+		self::assertInstanceOf(TestJob::class, $job2);
+
+		self::assertSame(0, $job1->executions);
+		self::assertSame(0, $job2->executions);
+
+		$result = $scheduler->run();
+
+		// Compat - orisai/scheduler v1
+		if (method_exists($result, 'getJobs')) {
+			self::assertCount(2, $result->getJobs());
+		} else {
+			self::assertCount(2, $result->getJobSummaries());
+		}
+
+		self::assertSame(1, $job1->executions);
+		self::assertSame(1, $job2->executions);
+	}
+
 	public function testInvalidTimeZone(): void
 	{
 		$configurator = new ManualConfigurator($this->rootDir);

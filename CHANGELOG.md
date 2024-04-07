@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - compatibility with orisai/scheduler:^2.1.0
 - `scheduler:explain` command is available
+- `SchedulerExtension`
+	- `jobs > <id> > enabled` option - allows disabling job via configuration
 
 ## [1.1.0](https://github.com/orisai/nette-scheduler/compare/1.0.2...1.1.0) - 2024-01-26
 

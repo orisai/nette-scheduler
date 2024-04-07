@@ -32,5 +32,5 @@ parameters:
 
 		-
 			message: "#^Call to function method_exists\\(\\) with Orisai\\\\Scheduler\\\\Status\\\\RunSummary and 'getJobs' will always evaluate to false\\.$#"
-			count: 2
+			count: 3
 			path: ../tests/Unit/DI/SchedulerExtensionTest.php

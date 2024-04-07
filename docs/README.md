@@ -10,6 +10,7 @@
 	- [Cron expression - minutes and above](#cron-expression---minutes-and-above)
 	- [Seconds](#seconds)
 	- [Timezones](#timezones)
+- [Disabling job](#disabling-job)
 - [Events](#events)
 	- [Before job event](#before-job-event)
 	- [After job event](#after-job-event)
@@ -248,6 +249,19 @@ If you want job to run at specific time (e.g. midnight) in timezone of each user
 timezone checking logic yourself. Several time zones have deviations of either 30 or 45 minutes. For instance, UTC-03:30
 is the standard time in Newfoundland, while Nepal's standard time is UTC+05:45. Indian Standard Time is UTC+05:30, and
 Myanmar Standard Time is UTC+06:30.
+
+## Disabling job
+
+You can disable any job by `enabled: false`. It will be skipped during jobs registration and not appear on the jobs
+list.
+
+```neon
+orisai.scheduler:
+	jobs:
+		-
+			enabled: false # bool
+			expression: # ...
+```
 
 ## Events
 

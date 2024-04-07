@@ -98,6 +98,7 @@ final class SchedulerExtension extends CompilerExtension
 			]),
 			'jobs' => Expect::arrayOf(
 				Expect::structure([
+					'enabled' => Expect::bool(true),
 					'expression' => Expect::string()
 						->assert(
 							static fn (string $value): bool => CronExpression::isValidExpression($value),
@@ -203,6 +204,10 @@ final class SchedulerExtension extends CompilerExtension
 			$jobs = [];
 			$expressions = [];
 			foreach ($config->jobs as $id => $job) {
+				if (!$job->enabled) {
+					continue;
+				}
+
 				/** @codeCoverageIgnore */
 				if ($job->repeatAfterSeconds !== 0) {
 					throw InvalidArgument::create()
@@ -234,6 +239,10 @@ final class SchedulerExtension extends CompilerExtension
 
 		$jobSchedules = [];
 		foreach ($config->jobs as $id => $job) {
+			if (!$job->enabled) {
+				continue;
+			}
+
 			$jobDefinitionName = $this->registerJob($id, $job, $builder, $loader);
 			$jobSchedules[$id] = [
 				'job' => $jobDefinitionName,
