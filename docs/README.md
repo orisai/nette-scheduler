@@ -896,10 +896,10 @@ Options:
 - `-v` - display absolute times
 - `--timezone` (or `-tz`) - display times in specified timezone instead of one used by application
 	- e.g. `--tz=UTC`
-- `--explain[=<language>]` - explain whole expression, including [seconds](#seconds) and [timezones](#timezones)
+- `--explain[=<locale>]` - explain whole expression, including [seconds](#seconds) and [timezones](#timezones)
 	- [Explain command](#explain-command) with `--id` parameter can be used to explain specific job
 	- e.g. `--explain`
-	- e.g. `--explain=en` (to choose language)
+	- e.g. `--explain=en` (to choose locale)
 
 ### Worker command
 
@@ -939,7 +939,7 @@ Explain cron expression syntax
 bin/console scheduler:explain
 bin/console scheduler:explain --id="job id"
 bin/console scheduler:explain --expression="0 22 * 12 *"
-bin/console scheduler:explain --expression="* 8 * * *" --seconds=10 --timezone="Europe/Prague" --language=en
+bin/console scheduler:explain --expression="* 8 * * *" --seconds=10 --timezone="Europe/Prague" --locale=en
 bin/console scheduler:explain -e"* 8 * * *" -s10 -tz"Europe/Prague" -len
 ```
 
@@ -950,7 +950,7 @@ Options:
 - `--expression=<expression>` (or `-e`) - explain expression
 - `--seconds=<seconds>` (or `-s`) - repeat every n seconds
 - `--timezone=<timezone>` (or `-tz`) - the timezone time should be displayed in
-- `--language=<language>` (or `-l`) - explain in specified language
+- `--locale=<locale>` (or `-l`) - explain in specified locale
 
 
 ## Troubleshooting guide
