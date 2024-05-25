@@ -768,8 +768,9 @@ orisai.scheduler:
 				setup:
 					- setCommandParameters([
 						'argument': 'value',
-						'--option': 'value',
-						'--boolean-option': true,
+						'--value-option': 'value',
+						'--no-value-option': null,
+						'--array-value-option': ['value1', 'value2'],
 					])
 ```
 
