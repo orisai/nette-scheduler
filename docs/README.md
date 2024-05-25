@@ -24,7 +24,7 @@
 - [Job types](#job-types)
 	- [Callback job](#callback-job)
 	- [Custom job](#custom-job)
-	- [Symfony command job](#symfony-command-job)
+	- [Symfony console job](#symfony-console-job)
 - [Job info and result](#job-info-and-result)
 - [Run summary](#run-summary)
 - [Run single job](#run-single-job)
@@ -739,7 +739,7 @@ orisai.scheduler:
 			job: Example\CustomJob()
 ```
 
-### Symfony command job
+### Symfony console job
 
 Run [symfony/console](https://github.com/symfony/console) command as a job
 
@@ -753,7 +753,7 @@ orisai.scheduler:
 		-
 			expression: * * * * *
 			# @service.reference and any syntax that works in services section is fine
-			job: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+			job: Orisai\Scheduler\Job\SymfonyConsoleJob(@example.command.service)
 ```
 
 Command can be parametrized:
@@ -764,7 +764,7 @@ orisai.scheduler:
 		-
 			expression: * * * * *
 			job:
-				factory: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+				factory: Orisai\Scheduler\Job\SymfonyConsoleJob(@example.command.service)
 				setup:
 					- setCommandParameters([
 						'argument': 'value',
@@ -782,7 +782,7 @@ orisai.scheduler:
 		-
 			expression: * * * * *
 			job:
-				factory: Orisai\Scheduler\Job\SymfonyCommandJob(@example.command.service)
+				factory: Orisai\Scheduler\Job\SymfonyConsoleJob(@example.command.service)
 				setup:
 					- setLockTtl(600) # Time in seconds
 ```
