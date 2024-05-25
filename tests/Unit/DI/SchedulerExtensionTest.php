@@ -158,7 +158,7 @@ final class SchedulerExtensionTest extends TestCase
 		self::assertEquals(new DateTimeZone('Europe/Prague'), $schedule->getTimeZone());
 
 		$schedule = $schedules[2];
-		self::assertEquals(new CronExpression('1 * * * *'), $schedule->getExpression());
+		self::assertEquals(new CronExpression('@yearly'), $schedule->getExpression());
 		self::assertSame(30, $schedule->getRepeatAfterSeconds());
 		self::assertEquals(new DateTimeZone('UTC'), $schedule->getTimeZone());
 	}

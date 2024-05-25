@@ -13,7 +13,7 @@ orisai.scheduler:
 			repeatAfterSeconds: 1
 			timeZone: Europe/Prague
 		2:
-			expression: 1 * * * *
+			expression: '@yearly'
 			job: Tests\OriNette\Scheduler\Doubles\TestJob('2')
 			repeatAfterSeconds: 30
 			timeZone: UTC

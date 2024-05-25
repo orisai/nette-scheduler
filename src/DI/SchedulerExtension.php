@@ -26,11 +26,14 @@ use Orisai\Scheduler\ManagedScheduler;
 use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use stdClass;
+use function assert;
 use function class_exists;
 use function function_exists;
 use function in_array;
 use function is_array;
 use function method_exists;
+use function str_starts_with;
+use function substr;
 use function timezone_identifiers_list;
 
 /**
@@ -43,7 +46,7 @@ final class SchedulerExtension extends CompilerExtension
 	{
 		return Expect::structure([
 			'errorHandler' => Expect::anyOf(
-				/* @infection-ignore-all */
+			/* @infection-ignore-all */
 				Expect::array()->min(2)->max(2),
 				'tracy',
 				null,
@@ -101,7 +104,16 @@ final class SchedulerExtension extends CompilerExtension
 					'enabled' => Expect::bool(true),
 					'expression' => Expect::string()
 						->assert(
-							static fn (string $value): bool => CronExpression::isValidExpression($value),
+							static function (string $value): bool {
+								if (str_starts_with($value, '@@')) { // '@yearly' - string
+									$value = substr($value, 1);
+									assert($value !== false);
+								} elseif (str_starts_with($value, '@')) { // @yearly - service reference
+									return false;
+								}
+
+								return CronExpression::isValidExpression($value);
+							},
 							'Valid cron expression',
 						),
 					'callback' => Expect::anyOf(
