@@ -507,14 +507,27 @@ installed, extended logging would look like this:
 ```php
 namespace Example;
 
-class SchedulerLogger
+use Psr\Log\LoggerInterface;
+
+final class SchedulerLogger
 {
+
+	private LoggerInterface $logger;
+
+	public function __construct(LoggerInterface $logger)
+	{
+		$this->logger = $logger;
+	}
 
 	public function log(Throwable $throwable, JobInfo $info, JobResult $result): void
 	{
-		$this->logger->error("Job {$info->getName()} failed", [
+		$id = $info->getId();
+		$name = $info->getName();
+
+		$this->logger->error("Job [$id] $name failed", [
 			'exception' => $throwable,
-			'name' => $info->getName(),
+			'id' => $id,
+			'name' => $name,
 			'expression' => $info->getExtendedExpression(),
 			'runSecond' => $info->getRunSecond(),
 			'start' => $info->getStart()->format(DateTimeInterface::ATOM),
