@@ -30,7 +30,7 @@
 		}
 	],
 	"require": {
-		"php": ">=7.4.0 <8.3.0",
+		"php": "7.4 - 8.3",
 		"nette/di": "^3.0.5",
 		"nette/schema": "^1.1.0",
 		"orisai/cron-expression-explainer": "^1.0.0",

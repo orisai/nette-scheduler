@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased](https://github.com/orisai/nette-scheduler/compare/1.2.0...v1.x)
 
+### Added
+
+- Allow PHP 8.3
+
 ## [1.2.0](https://github.com/orisai/nette-scheduler/compare/1.1.0...1.2.0) - 2024-05-26
 
 ### Added
