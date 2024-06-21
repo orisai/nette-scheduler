@@ -26,7 +26,6 @@ use Orisai\Scheduler\ManagedScheduler;
 use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use stdClass;
-use function assert;
 use function class_exists;
 use function function_exists;
 use function in_array;
@@ -107,7 +106,6 @@ final class SchedulerExtension extends CompilerExtension
 							static function (string $value): bool {
 								if (str_starts_with($value, '@@')) { // '@yearly' - string
 									$value = substr($value, 1);
-									assert($value !== false);
 								} elseif (str_starts_with($value, '@')) { // @yearly - service reference
 									return false;
 								}
