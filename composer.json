@@ -35,7 +35,7 @@
 		"nette/schema": "^1.1.0",
 		"orisai/cron-expression-explainer": "^1.0.0",
 		"orisai/exceptions": "^1.0.0",
-		"orisai/nette-di": "^1.0.7",
+		"orisai/nette-di": "^1.3.1",
 		"orisai/scheduler": "^1.0.0|^2.0.0"
 	},
 	"require-dev": {
