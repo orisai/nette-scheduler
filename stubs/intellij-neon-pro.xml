@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE neon PUBLIC "-//NEON//Neon plugin XML V0.0.1//EN" "../.idea/intellij-neon-pro/xmlSources/Neon.xsd">
+<neon vendor="orisai/nette-scheduler" version="1">
+	<extensions>
+		<extension type="OriNette\Scheduler\DI\SchedulerExtension">
+			<schema>
+				<structure>
+					<field name="errorHandler" default="null">
+						<arrayOf minItems="2" maxItems="2">
+							<value>
+								<mixed/>
+							</value>
+						</arrayOf>
+						<string/>
+						<null/>
+					</field>
+					<field name="executor" default="auto">
+						<string/>
+					</field>
+					<field name="console">
+						<structure>
+							<field name="script" default="bin/console">
+								<string/>
+							</field>
+							<field name="runCommand" default="scheduler:run">
+								<string/>
+							</field>
+							<field name="runJobCommand" default="scheduler:run-job">
+								<string/>
+							</field>
+						</structure>
+					</field>
+					<field name="events">
+						<structure>
+							<field name="beforeRun">
+								<useReusable ref="job-events"/>
+							</field>
+							<field name="afterRun">
+								<useReusable ref="job-events"/>
+							</field>
+							<field name="lockedJob">
+								<useReusable ref="job-events"/>
+							</field>
+							<field name="beforeJob">
+								<useReusable ref="job-events"/>
+							</field>
+							<field name="afterJob">
+								<useReusable ref="job-events"/>
+							</field>
+						</structure>
+					</field>
+					<field name="jobs">
+						<arrayOf>
+							<value>
+								<structure>
+									<field name="enabled" default="true">
+										<bool/>
+									</field>
+									<field name="expression">
+										<string/>
+									</field>
+									<field name="callback" default="null">
+										<useReusable ref="callback"/>
+									</field>
+									<field name="job" default="null">
+										<useReusable ref="nullable-definition"/>
+									</field>
+									<field name="repeatAfterSeconds" default="0">
+										<int min="0" max="30"/>
+									</field>
+									<field name="timeZone" default="null">
+										<string/>
+										<null/>
+									</field>
+								</structure>
+							</value>
+						</arrayOf>
+					</field>
+				</structure>
+			</schema>
+			<services>
+				<service name="scheduler" type="Orisai\Scheduler\Scheduler"/>
+				<service name="jobManager" type="Orisai\Scheduler\Manager\JobManager"/>
+				<service name="executor" type="Orisai\Scheduler\Executor\JobExecutor"/>
+				<service name="command.list" type="Orisai\Scheduler\Command\ListCommand"/>
+				<service name="command.run" type="Orisai\Scheduler\Command\RunCommand"/>
+				<service name="command.runJob" type="Orisai\Scheduler\Command\RunJobCommand"/>
+				<service name="command.worker" type="Orisai\Scheduler\Command\WorkerCommand"/>
+				<service name="command.explain" type="Orisai\Scheduler\Command\ExplainCommand"/>
+				<service name="explainer" type="Orisai\CronExpressionExplainer\CronExpressionExplainer"/>
+			</services>
+		</extension>
+	</extensions>
+	<reusables>
+		<reusable id="nullable-definition">
+			<string/>
+			<arrayOf>
+				<key>
+					<int/>
+					<string/>
+				</key>
+				<value>
+					<mixed/>
+				</value>
+			</arrayOf>
+			<type value="object"/>
+			<null/>
+		</reusable>
+		<reusable id="callback">
+			<string/>
+			<arrayOf minItems="2" maxItems="2">
+				<value>
+					<mixed/>
+				</value>
+			</arrayOf>
+			<type value="object"/>
+		</reusable>
+		<reusable id="job-events">
+			<listOf>
+				<value>
+					<useReusable ref="callback"/>
+				</value>
+			</listOf>
+		</reusable>
+	</reusables>
+</neon>
