@@ -8,6 +8,8 @@ use Nette\DI\CompilerExtension;
 use Nette\DI\ContainerBuilder;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
+use Nette\Schema\Elements\AnyOf;
+use Nette\Schema\Elements\Type;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
 use OriNette\DI\Definitions\DefinitionsLoader;
@@ -41,6 +43,21 @@ use function timezone_identifiers_list;
 final class SchedulerExtension extends CompilerExtension
 {
 
+	private function createCallbackSchema(): AnyOf
+	{
+		return Expect::anyOf(
+			Expect::string(),
+			/* @infection-ignore-all */
+			Expect::array()->min(2)->max(2),
+			Expect::type(Statement::class),
+		);
+	}
+
+	private function createJobEventsSchema(): Type
+	{
+		return Expect::listOf($this->createCallbackSchema());
+	}
+
 	public function getConfigSchema(): Schema
 	{
 		return Expect::structure([
@@ -57,46 +74,11 @@ final class SchedulerExtension extends CompilerExtension
 				'runJobCommand' => Expect::string()->default('scheduler:run-job'),
 			]),
 			'events' => Expect::structure([
-				'beforeRun' => Expect::listOf(
-					Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					),
-				),
-				'afterRun' => Expect::listOf(
-					Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					),
-				),
-				'lockedJob' => Expect::listOf(
-					Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					),
-				),
-				'beforeJob' => Expect::listOf(
-					Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					),
-				),
-				'afterJob' => Expect::listOf(
-					Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					),
-				),
+				'beforeRun' => $this->createJobEventsSchema(),
+				'afterRun' => $this->createJobEventsSchema(),
+				'lockedJob' => $this->createJobEventsSchema(),
+				'beforeJob' => $this->createJobEventsSchema(),
+				'afterJob' => $this->createJobEventsSchema(),
 			]),
 			'jobs' => Expect::arrayOf(
 				Expect::structure([
@@ -114,12 +96,7 @@ final class SchedulerExtension extends CompilerExtension
 							},
 							'Valid cron expression',
 						),
-					'callback' => Expect::anyOf(
-						Expect::string(),
-						/* @infection-ignore-all */
-						Expect::array()->min(2)->max(2),
-						Expect::type(Statement::class),
-					)->default(null),
+					'callback' => $this->createCallbackSchema()->default(null),
 					'job' => DefinitionsLoader::schema()->default(null),
 					'repeatAfterSeconds' => Expect::int(0)
 						->min(0)
