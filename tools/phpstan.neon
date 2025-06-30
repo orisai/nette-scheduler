@@ -22,10 +22,6 @@ parameters:
 		checkedExceptionClasses:
 			- Orisai\Exceptions\Check\CheckedException
 
-	excludePaths:
-		# Compat - orisai/scheduler v1
-		- ../src/DI/LazyJobManagerV1.php
-
 	ignoreErrors:
 		# Internal classes in tests
 		-

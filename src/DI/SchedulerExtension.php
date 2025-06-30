@@ -16,7 +16,6 @@ use OriNette\DI\Definitions\DefinitionsLoader;
 use OriNette\Scheduler\Tracy\SchedulerTracyLogger;
 use Orisai\CronExpressionExplainer\CronExpressionExplainer;
 use Orisai\CronExpressionExplainer\DefaultCronExpressionExplainer;
-use Orisai\Exceptions\Logic\InvalidArgument;
 use Orisai\Scheduler\Command\ExplainCommand;
 use Orisai\Scheduler\Command\ListCommand;
 use Orisai\Scheduler\Command\RunCommand;
@@ -25,14 +24,12 @@ use Orisai\Scheduler\Command\WorkerCommand;
 use Orisai\Scheduler\Executor\ProcessJobExecutor;
 use Orisai\Scheduler\Job\CallbackJob;
 use Orisai\Scheduler\ManagedScheduler;
-use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use stdClass;
 use function class_exists;
 use function function_exists;
 use function in_array;
 use function is_array;
-use function method_exists;
 use function str_starts_with;
 use function substr;
 use function timezone_identifiers_list;
@@ -145,26 +142,23 @@ final class SchedulerExtension extends CompilerExtension
 
 		$events = $config->events;
 
-		// Compat - orisai/scheduler v1
-		if (method_exists(Scheduler::class, 'getJobSchedules')) {
-			$this->addEventsToScheduler(
-				$schedulerDefinition,
-				'addBeforeRunCallback',
-				$events->beforeRun,
-			);
+		$this->addEventsToScheduler(
+			$schedulerDefinition,
+			'addBeforeRunCallback',
+			$events->beforeRun,
+		);
 
-			$this->addEventsToScheduler(
-				$schedulerDefinition,
-				'addAfterRunCallback',
-				$events->afterRun,
-			);
+		$this->addEventsToScheduler(
+			$schedulerDefinition,
+			'addAfterRunCallback',
+			$events->afterRun,
+		);
 
-			$this->addEventsToScheduler(
-				$schedulerDefinition,
-				'addLockedJobCallback',
-				$events->lockedJob,
-			);
-		}
+		$this->addEventsToScheduler(
+			$schedulerDefinition,
+			'addLockedJobCallback',
+			$events->lockedJob,
+		);
 
 		$this->addEventsToScheduler(
 			$schedulerDefinition,
@@ -184,45 +178,6 @@ final class SchedulerExtension extends CompilerExtension
 	private function registerJobManager(ContainerBuilder $builder, stdClass $config): ServiceDefinition
 	{
 		$loader = new DefinitionsLoader($this->compiler);
-
-		// Compat - orisai/scheduler v1
-		/** @infection-ignore-all */
-		if (method_exists(JobManager::class, 'getPairs')) {
-			$jobs = [];
-			$expressions = [];
-			foreach ($config->jobs as $id => $job) {
-				if (!$job->enabled) {
-					continue;
-				}
-
-				/** @codeCoverageIgnore */
-				if ($job->repeatAfterSeconds !== 0) {
-					throw InvalidArgument::create()
-						->withMessage(
-							"Option `$this->name > jobs > $id > repeatAfterSeconds` requires orisai/scheduler >= 2.0.0",
-						);
-				}
-
-				/** @codeCoverageIgnore */
-				if ($job->timeZone !== null) {
-					throw InvalidArgument::create()
-						->withMessage(
-							"Option `$this->name > jobs > $id > timeZone` requires orisai/scheduler >= 2.0.0",
-						);
-				}
-
-				$expressions[$id] = $job->expression;
-				$jobDefinitionName = $this->registerJob($id, $job, $builder, $loader);
-				$jobs[$id] = $jobDefinitionName;
-			}
-
-			return $builder->addDefinition($this->prefix('jobManager'))
-				->setFactory(LazyJobManagerV1::class, [
-					'jobs' => $jobs,
-					'expressions' => $expressions,
-				])
-				->setAutowired(false);
-		}
 
 		$jobSchedules = [];
 		foreach ($config->jobs as $id => $job) {

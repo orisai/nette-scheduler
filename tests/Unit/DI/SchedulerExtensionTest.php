@@ -9,7 +9,6 @@ use Generator;
 use Nette\DI\InvalidConfigurationException;
 use OriNette\DI\Boot\ManualConfigurator;
 use OriNette\Scheduler\DI\LazyJobManager;
-use OriNette\Scheduler\DI\LazyJobManagerV1;
 use Orisai\CronExpressionExplainer\CronExpressionExplainer;
 use Orisai\CronExpressionExplainer\DefaultCronExpressionExplainer;
 use Orisai\Scheduler\Command\ExplainCommand;
@@ -20,7 +19,6 @@ use Orisai\Scheduler\Command\WorkerCommand;
 use Orisai\Scheduler\Executor\ProcessJobExecutor;
 use Orisai\Scheduler\Job\CallbackJob;
 use Orisai\Scheduler\ManagedScheduler;
-use Orisai\Scheduler\Manager\JobManager;
 use Orisai\Scheduler\Scheduler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Lock\LockFactory;
@@ -33,7 +31,6 @@ use Tracy\Debugger;
 use function class_exists;
 use function dirname;
 use function function_exists;
-use function method_exists;
 use function mkdir;
 use const PHP_VERSION_ID;
 
@@ -68,14 +65,8 @@ final class SchedulerExtensionTest extends TestCase
 		self::assertSame($scheduler, $container->getByType(Scheduler::class));
 
 		$manager = $container->getService('orisai.scheduler.jobManager');
-		// Compat - orisai/scheduler v1
-		if (method_exists(JobManager::class, 'getPairs')) {
-			self::assertInstanceOf(LazyJobManagerV1::class, $manager);
-			self::assertNull($container->getByType(LazyJobManagerV1::class, false));
-		} else {
-			self::assertInstanceOf(LazyJobManager::class, $manager);
-			self::assertNull($container->getByType(LazyJobManager::class, false));
-		}
+		self::assertInstanceOf(LazyJobManager::class, $manager);
+		self::assertNull($container->getByType(LazyJobManager::class, false));
 
 		if (function_exists('proc_open')) {
 			$executor = $container->getService('orisai.scheduler.executor');
@@ -131,11 +122,6 @@ final class SchedulerExtensionTest extends TestCase
 
 	public function testJobSchedules(): void
 	{
-		// Compat - orisai/scheduler v1
-		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
-			self::markTestSkipped('Schedules are available since v2');
-		}
-
 		$configurator = new ManualConfigurator($this->rootDir);
 		$configurator->setForceReloadContainer();
 		$configurator->addConfig(__DIR__ . '/SchedulerExtension.jobSchedules.neon');
@@ -184,12 +170,7 @@ final class SchedulerExtensionTest extends TestCase
 
 		$result = $scheduler->run();
 
-		// Compat - orisai/scheduler v1
-		if (method_exists($result, 'getJobs')) {
-			self::assertCount(2, $result->getJobs());
-		} else {
-			self::assertCount(2, $result->getJobSummaries());
-		}
+		self::assertCount(2, $result->getJobSummaries());
 
 		self::assertSame(1, $job1->executions);
 		self::assertSame(1, $job2->executions);
@@ -235,12 +216,7 @@ final class SchedulerExtensionTest extends TestCase
 
 		$result = $scheduler->run();
 
-		// Compat - orisai/scheduler v1
-		if (method_exists($result, 'getJobs')) {
-			self::assertCount(4, $result->getJobs());
-		} else {
-			self::assertCount(4, $result->getJobSummaries());
-		}
+		self::assertCount(4, $result->getJobSummaries());
 
 		self::assertSame(2, $service->executions);
 		self::assertSame(1, $job1->executions);
@@ -267,21 +243,11 @@ final class SchedulerExtensionTest extends TestCase
 		$result = $scheduler->run();
 
 		// Can't test the same way as basic executor, we are in different process
-		// Compat - orisai/scheduler v1
-		if (method_exists($result, 'getJobs')) {
-			self::assertCount(2, $result->getJobs());
-		} else {
-			self::assertCount(2, $result->getJobSummaries());
-		}
+		self::assertCount(2, $result->getJobSummaries());
 	}
 
 	public function testRunEvents(): void
 	{
-		// Compat - orisai/scheduler v1
-		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
-			self::markTestSkipped('Run events are available since v2');
-		}
-
 		$configurator = new ManualConfigurator($this->rootDir);
 		$configurator->setForceReloadContainer();
 		$configurator->addConfig(__DIR__ . '/SchedulerExtension.runEvents.neon');
@@ -311,11 +277,6 @@ final class SchedulerExtensionTest extends TestCase
 
 	public function testLockedJobEvents(): void
 	{
-		// Compat - orisai/scheduler v1
-		if (!method_exists(Scheduler::class, 'getJobSchedules')) {
-			self::markTestSkipped('Locked job events are available since v2');
-		}
-
 		$configurator = new ManualConfigurator($this->rootDir);
 		$configurator->setForceReloadContainer();
 		$configurator->addConfig(__DIR__ . '/SchedulerExtension.lockedJobEvents.neon');
