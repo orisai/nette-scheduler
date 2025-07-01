@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 
 - Compatibility with `orisai/scheduler` v1 (only v2 is now supported)
+- Compatibility with `nette/di` <3.1.0
 
 ## [1.2.3](https://github.com/orisai/nette-scheduler/compare/1.2.2...1.2.3) - 2025-01-19
 
