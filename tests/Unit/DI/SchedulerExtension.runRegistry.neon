@@ -1,0 +1,13 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	runRegistry: Orisai\Scheduler\RunRegistry\FileRunRegistry(%tempDir%/scheduler-runs)
+
+	jobs:
+		0:
+			expression: * * * * *
+			callback: [@service, 'do']
+
+services:
+	service: Tests\OriNette\Scheduler\Doubles\TestService

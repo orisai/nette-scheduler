@@ -15,10 +15,14 @@ use Orisai\Scheduler\Command\ExplainCommand;
 use Orisai\Scheduler\Command\ListCommand;
 use Orisai\Scheduler\Command\RunCommand;
 use Orisai\Scheduler\Command\RunJobCommand;
+use Orisai\Scheduler\Command\StatusCommand;
 use Orisai\Scheduler\Command\WorkerCommand;
 use Orisai\Scheduler\Executor\ProcessJobExecutor;
 use Orisai\Scheduler\Job\CallbackJob;
+use Orisai\Scheduler\Maintenance\MaintenanceManager;
 use Orisai\Scheduler\ManagedScheduler;
+use Orisai\Scheduler\RunRegistry\FileRunRegistry;
+use Orisai\Scheduler\RunRegistry\LockPoolRunRegistry;
 use Orisai\Scheduler\Scheduler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Lock\LockFactory;
@@ -28,10 +32,15 @@ use Tests\OriNette\Scheduler\Doubles\TestLogger;
 use Tests\OriNette\Scheduler\Doubles\TestSchedulerLogger;
 use Tests\OriNette\Scheduler\Doubles\TestService;
 use Tracy\Debugger;
+use function array_filter;
 use function class_exists;
 use function dirname;
 use function function_exists;
 use function mkdir;
+use function restore_error_handler;
+use function set_error_handler;
+use function str_contains;
+use const E_USER_DEPRECATED;
 use const PHP_VERSION_ID;
 
 /**
@@ -281,7 +290,31 @@ final class SchedulerExtensionTest extends TestCase
 		$configurator->setForceReloadContainer();
 		$configurator->addConfig(__DIR__ . '/SchedulerExtension.lockedJobEvents.neon');
 
-		$container = $configurator->createContainer();
+		$deprecations = [];
+		set_error_handler(static function (int $errno, string $message) use (&$deprecations): bool {
+			if ($errno === E_USER_DEPRECATED) {
+				$deprecations[] = $message;
+
+				return true;
+			}
+
+			return false;
+		});
+
+		try {
+			$container = $configurator->createContainer();
+		} finally {
+			restore_error_handler();
+		}
+
+		self::assertNotEmpty(
+			array_filter(
+				$deprecations,
+				static fn (string $message): bool => str_contains($message, 'events.lockedJob')
+					&& str_contains($message, 'afterJob'),
+			),
+			'Configuring events.lockedJob should trigger a deprecation warning pointing to afterJob',
+		);
 
 		$scheduler = $container->getByType(Scheduler::class);
 		$lockFactory = $container->getByType(LockFactory::class);
@@ -414,6 +447,91 @@ final class SchedulerExtensionTest extends TestCase
 	{
 		yield [__DIR__ . '/SchedulerExtension.invalidJobDefinition.both.neon'];
 		yield [__DIR__ . '/SchedulerExtension.invalidJobDefinition.none.neon'];
+	}
+
+	public function testMaintenanceAndRegistryDisabled(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.minimal.neon');
+
+		$container = $configurator->createContainer();
+
+		self::assertFalse($container->hasService('orisai.scheduler.maintenanceManager'));
+		self::assertFalse($container->hasService('orisai.scheduler.maintenanceChecker'));
+		self::assertFalse($container->hasService('orisai.scheduler.runRegistry'));
+		self::assertFalse($container->hasService('orisai.scheduler.command.status'));
+	}
+
+	public function testRunRegistryWithoutMaintenance(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.runRegistry.neon');
+
+		$container = $configurator->createContainer();
+
+		$registry = $container->getService('orisai.scheduler.runRegistry');
+		self::assertInstanceOf(FileRunRegistry::class, $registry);
+
+		// StatusCommand is registered (run tracking works without maintenance)
+		$statusCommand = $container->getService('orisai.scheduler.command.status');
+		self::assertInstanceOf(StatusCommand::class, $statusCommand);
+
+		// No maintenance manager
+		self::assertFalse($container->hasService('orisai.scheduler.maintenanceManager'));
+
+		// Scheduler has RunRegistry but no MaintenanceManager
+		$scheduler = $container->getService('orisai.scheduler.scheduler');
+		self::assertInstanceOf(ManagedScheduler::class, $scheduler);
+	}
+
+	public function testMaintenanceWithFileRegistry(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.maintenance.file.neon');
+
+		$container = $configurator->createContainer();
+
+		$manager = $container->getService('orisai.scheduler.maintenanceManager');
+		self::assertInstanceOf(MaintenanceManager::class, $manager);
+
+		$registry = $container->getService('orisai.scheduler.runRegistry');
+		self::assertInstanceOf(FileRunRegistry::class, $registry);
+
+		$statusCommand = $container->getService('orisai.scheduler.command.status');
+		self::assertInstanceOf(StatusCommand::class, $statusCommand);
+
+		$scheduler = $container->getService('orisai.scheduler.scheduler');
+		self::assertInstanceOf(ManagedScheduler::class, $scheduler);
+	}
+
+	public function testMaintenanceWithLockPoolRegistry(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.maintenance.lockPool.neon');
+
+		$container = $configurator->createContainer();
+
+		$manager = $container->getService('orisai.scheduler.maintenanceManager');
+		self::assertInstanceOf(MaintenanceManager::class, $manager);
+
+		$registry = $container->getService('orisai.scheduler.runRegistry');
+		self::assertInstanceOf(LockPoolRunRegistry::class, $registry);
+	}
+
+	public function testMaintenanceWithCustomRunRegistry(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.maintenance.customRegistry.neon');
+
+		$container = $configurator->createContainer();
+
+		$manager = $container->getService('orisai.scheduler.maintenanceManager');
+		self::assertInstanceOf(MaintenanceManager::class, $manager);
 	}
 
 }

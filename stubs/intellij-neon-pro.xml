@@ -38,7 +38,7 @@
 							<field name="afterRun">
 								<useReusable ref="job-events"/>
 							</field>
-							<field name="lockedJob">
+							<field name="lockedJob" deprecated="use afterJob instead">
 								<useReusable ref="job-events"/>
 							</field>
 							<field name="beforeJob">
@@ -46,6 +46,19 @@
 							</field>
 							<field name="afterJob">
 								<useReusable ref="job-events"/>
+							</field>
+						</structure>
+					</field>
+					<field name="runRegistry" default="null">
+						<useReusable ref="nullable-definition"/>
+					</field>
+					<field name="maintenance">
+						<structure>
+							<field name="checker" default="null">
+								<useReusable ref="nullable-definition"/>
+							</field>
+							<field name="gracePeriodSeconds" default="30">
+								<int/>
 							</field>
 						</structure>
 					</field>
@@ -87,6 +100,10 @@
 				<service name="command.runJob" type="Orisai\Scheduler\Command\RunJobCommand"/>
 				<service name="command.worker" type="Orisai\Scheduler\Command\WorkerCommand"/>
 				<service name="command.explain" type="Orisai\Scheduler\Command\ExplainCommand"/>
+				<service name="command.status" type="Orisai\Scheduler\Command\StatusCommand"/>
+				<service name="runRegistry" type="Orisai\Scheduler\RunRegistry\RunRegistry"/>
+				<service name="maintenanceChecker" type="Orisai\Scheduler\Maintenance\MaintenanceChecker"/>
+				<service name="maintenanceManager" type="Orisai\Scheduler\Maintenance\MaintenanceManager"/>
 				<service name="explainer" type="Orisai\CronExpressionExplainer\CronExpressionExplainer"/>
 			</services>
 		</extension>

@@ -1,25 +1,25 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Method OriNette\\Scheduler\\DI\\LazyJobManager\:\:getExpressions\(\) return type has no value type specified in iterable type array\.$#'
+			rawMessage: 'Method OriNette\Scheduler\DI\LazyJobManager::getExpressions() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: ../src/DI/LazyJobManager.php
 
 		-
-			message: '#^Method OriNette\\Scheduler\\DI\\LazyJobManager\:\:getPair\(\) has parameter \$id with no type specified\.$#'
+			rawMessage: 'Method OriNette\Scheduler\DI\LazyJobManager::getPair() has parameter $id with no type specified.'
 			identifier: missingType.parameter
 			count: 1
 			path: ../src/DI/LazyJobManager.php
 
 		-
-			message: '#^Method OriNette\\Scheduler\\DI\\LazyJobManager\:\:getPair\(\) return type has no value type specified in iterable type array\.$#'
+			rawMessage: 'Method OriNette\Scheduler\DI\LazyJobManager::getPair() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: ../src/DI/LazyJobManager.php
 
 		-
-			message: '#^Method OriNette\\Scheduler\\DI\\LazyJobManager\:\:getPairs\(\) return type has no value type specified in iterable type array\.$#'
+			rawMessage: 'Method OriNette\Scheduler\DI\LazyJobManager::getPairs() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: ../src/DI/LazyJobManager.php

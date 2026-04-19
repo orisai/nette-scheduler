@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased](https://github.com/orisai/nette-scheduler/compare/1.3.0...v1.x)
 
+### Added
+
+- `SchedulerExtension`
+	- `runRegistry` configuration option - tracks active `scheduler:run` processes independently of maintenance
+	- `maintenance` configuration option
+		- `checker` - service implementing `MaintenanceChecker` interface
+		- `gracePeriodSeconds` - time before force-kill (default 30)
+- `scheduler:status` command registered when `runRegistry` is configured
+
+### Deprecated
+
+- `SchedulerExtension`
+	- `events > lockedJob` option - use `events > afterJob` and check `$result->getState() === JobResultState::lock()` instead
+
 ## [1.3.0](https://github.com/orisai/nette-scheduler/compare/1.2.3...1.3.0) - 2025-07-01
 
 ### Removed

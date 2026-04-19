@@ -1,0 +1,22 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+
+orisai.scheduler:
+	executor: process
+	console:
+		script: tests/Unit/DI/schedulerExtensionProcessExecutable.php
+
+	runRegistry: @customRunRegistry
+
+	maintenance:
+		checker: @maintenanceChecker
+
+	jobs:
+		0:
+			expression: * * * * *
+			callback: [@service, 'do']
+
+services:
+	maintenanceChecker: Tests\OriNette\Scheduler\Doubles\TestMaintenanceChecker
+	customRunRegistry: Tests\OriNette\Scheduler\Doubles\TestRunRegistry
+	service: Tests\OriNette\Scheduler\Doubles\TestService
