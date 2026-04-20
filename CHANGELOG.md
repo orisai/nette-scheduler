@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased](https://github.com/orisai/nette-scheduler/compare/1.4.0...v1.x)
 
+### Fixed
+
+- `SchedulerExtension`
+	- jobs load without failure even if registered later than the extension (e.g. another extension)
+
 ## [1.4.0](https://github.com/orisai/nette-scheduler/compare/1.3.0...1.4.0) - 2026-04-20
 
 ### Added

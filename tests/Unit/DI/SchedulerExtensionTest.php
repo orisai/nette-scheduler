@@ -185,6 +185,26 @@ final class SchedulerExtensionTest extends TestCase
 		self::assertSame(1, $job2->executions);
 	}
 
+	public function testJobRegisteredByLaterExtension(): void
+	{
+		$configurator = new ManualConfigurator($this->rootDir);
+		$configurator->setForceReloadContainer();
+		$configurator->addConfig(__DIR__ . '/SchedulerExtension.jobLoadedLater.neon');
+
+		$container = $configurator->createContainer();
+
+		$scheduler = $container->getByType(Scheduler::class);
+
+		$job = $container->getService('testJobLoader.job');
+		self::assertInstanceOf(TestJob::class, $job);
+		self::assertSame(0, $job->executions);
+
+		$result = $scheduler->run();
+
+		self::assertCount(1, $result->getJobSummaries());
+		self::assertSame(1, $job->executions);
+	}
+
 	public function testInvalidTimeZone(): void
 	{
 		$configurator = new ManualConfigurator($this->rootDir);

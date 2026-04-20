@@ -30,6 +30,7 @@ use Orisai\Scheduler\Maintenance\MaintenanceManager;
 use Orisai\Scheduler\ManagedScheduler;
 use Orisai\Scheduler\Scheduler;
 use stdClass;
+use function assert;
 use function class_exists;
 use function function_exists;
 use function in_array;
@@ -156,6 +157,14 @@ final class SchedulerExtension extends CompilerExtension
 		$this->registerExplainer($builder);
 	}
 
+	public function beforeCompile(): void
+	{
+		$builder = $this->getContainerBuilder();
+		$config = $this->config;
+
+		$this->addJobsToManager($builder, $config);
+	}
+
 	/**
 	 * @param ServiceDefinition|Definition|Reference|null $runRegistryDefinition
 	 */
@@ -251,6 +260,13 @@ final class SchedulerExtension extends CompilerExtension
 
 	private function registerJobManager(ContainerBuilder $builder, stdClass $config): ServiceDefinition
 	{
+		return $builder->addDefinition($this->prefix('jobManager'))
+			->setFactory(LazyJobManager::class)
+			->setAutowired(false);
+	}
+
+	private function addJobsToManager(ContainerBuilder $builder, stdClass $config): void
+	{
 		$loader = new DefinitionsLoader($this->compiler);
 
 		$jobSchedules = [];
@@ -268,11 +284,9 @@ final class SchedulerExtension extends CompilerExtension
 			];
 		}
 
-		return $builder->addDefinition($this->prefix('jobManager'))
-			->setFactory(LazyJobManager::class, [
-				'jobSchedules' => $jobSchedules,
-			])
-			->setAutowired(false);
+		$definition = $builder->getDefinition($this->prefix('jobManager'));
+		assert($definition instanceof ServiceDefinition);
+		$definition->setArgument('jobSchedules', $jobSchedules);
 	}
 
 	/**

@@ -1,0 +1,16 @@
+extensions:
+	orisai.scheduler: OriNette\Scheduler\DI\SchedulerExtension
+	testJobLoader: Tests\OriNette\Scheduler\Doubles\TestJobLoadingExtension
+
+orisai.scheduler:
+	executor: basic
+	jobs:
+		myJob:
+			expression: '* * * * *'
+			job: @testJobLoader.job
+
+testJobLoader:
+	name: from-extension
+
+services:
+	- Orisai\Clock\FrozenClock(1)
